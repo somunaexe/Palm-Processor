@@ -1,3 +1,8 @@
-terraform/node_modules
-terraform/*/*.tfvars
-terraform/environments/.terraform*
+node_modules
+*.tfvars
+.terraform*
+
+simvenv
+venv
+.env
+__pycache__
