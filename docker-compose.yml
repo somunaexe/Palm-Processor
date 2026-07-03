@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+
+  simulator:
+    build:
+      context: ./simulator
+    container_name: sensor-simulator
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: fastapi-backend
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
