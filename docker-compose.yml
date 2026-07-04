@@ -2,13 +2,20 @@ version: "3.8"
 
 services:
 
+  # terraform:
+  #   build:
+  #     context: ./terraform
+  #   container_name: terraform-infra
+  #   env_file:
+  #     - ./terraform/environments/terraform.tfvars
+  #   restart: unless-stopped
   simulator:
     build:
       context: ./simulator
     container_name: sensor-simulator
     env_file:
       - .env
-    restart: unless-stopped
+    # restart: unless-stopped
 
   backend:
     build:
@@ -18,4 +25,4 @@ services:
       - .env
     ports:
       - "8000:8000"
-    restart: unless-stopped
+    # restart: unless-stopped

@@ -3,6 +3,9 @@ import json
 import threading
 from fastapi import FastAPI
 from azure.eventhub import EventHubConsumerClient
+from app.ml.model import predict_risk
+from app.db.sql import insert_many
+from collections import deque
 
 app = FastAPI()
 
@@ -10,17 +13,36 @@ CONNECTION_STR = os.getenv("EVENTHUB_CONN_STR")
 EVENTHUB_NAME = os.getenv("EVENTHUB_NAME")
 CONSUMER_GROUP = "$Default"
 
-latest_events = []
+events = deque(maxlen=200)
+
+def flush_to_db():
+    global db_buffer
+
+    if not db_buffer:
+        return
+
+    insert_many(db_buffer)
+    print(f"SAVED BATCH: {len(db_buffer)}")
+
+    db_buffer = []
 
 def on_event(partition_context, event):
     data = json.loads(event.body_as_str())
-    print("RECEIVED:", data)
 
-    latest_events.append(data)
+    prediction = predict_risk(data)
+    enriched = { **data, **prediction }
+    print("RECEIVED + PREDICTED:", enriched)
+
+    # insert_events(enriched)  
+    events.append(enriched)
 
     # keep memory bounded
-    if len(latest_events) > 100:
-        latest_events.pop(0)
+    # if len(events) > 100:
+    #     events.pop(0)
+
+    # flush every 10 events
+    if len(db_buffer) >= 10:
+        flush_to_db()
 
     partition_context.update_checkpoint(event)
 
@@ -52,4 +74,20 @@ def health():
 
 @app.get("/events")
 def get_events():
-    return latest_events
+    return events
+
+# @app.get("/machines")
+# def a():
+#     return
+
+# @app.get("/machines/{machine_id}")
+# def a():
+#     return
+
+# @app.get("/alerts")
+# def a():
+#     return
+
+# @app.get("/analytics")
+# def a():
+#     return
