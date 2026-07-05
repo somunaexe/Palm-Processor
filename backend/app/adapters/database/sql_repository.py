@@ -6,6 +6,7 @@ from app.ports.sensor_repository import SensorRepository
 
 class SqlSensorRepository(SensorRepository):
 
+
     def __init__(self, db: Session):
         self.db = db
 
@@ -65,6 +66,7 @@ class SqlSensorRepository(SensorRepository):
             .limit(limit)
             .all()
         )
+        print(self.db)
         print(events)
         return [
             self._to_domain(e)

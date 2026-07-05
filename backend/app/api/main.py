@@ -1,7 +1,9 @@
 import json
 import logging
+import os
+import threading
 from fastapi import FastAPI
-# from azure.eventhub import EventHubConsumerClient
+from azure.eventhub import EventHubConsumerClient
 # from app.ml.model import predict_risk
 # from app.db.sql import insert_many
 # from collections import deque
@@ -16,11 +18,9 @@ app.include_router(events_router)
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# CONNECTION_STR = os.getenv("EVENTHUB_CONN_STR")
-# EVENTHUB_NAME = os.getenv("EVENTHUB_NAME")
-# CONSUMER_GROUP = "$Default"
-
-# events = deque(maxlen=200)
+CONNECTION_STR = os.getenv("EVENTHUB_CONN_STR")
+EVENTHUB_NAME = os.getenv("EVENTHUB_NAME")
+CONSUMER_GROUP = "$Default"
 
 def get_service():
     db = SessionLocal()
@@ -33,29 +33,30 @@ def on_event(partition_context, event):
     logger.info(f"📥 RECEIVED EVENT: {data}")
 
     sensor_event = SensorEvent(**data)
-    enriched = service.process_event(sensor_event)
+    enriched = service.process_events(sensor_event)
+
     logger.info(f"⚙️ PROCESSED EVENT: {enriched}")
 
     partition_context.update_checkpoint(event)
 
 
-# def start_consumer():
-#     client = EventHubConsumerClient.from_connection_string(
-#         conn_str=CONNECTION_STR,
-#         consumer_group=CONSUMER_GROUP,
-#         eventhub_name=EVENTHUB_NAME
-#     )
+def start_consumer():
+    client = EventHubConsumerClient.from_connection_string(
+        conn_str=CONNECTION_STR,
+        consumer_group=CONSUMER_GROUP,
+        eventhub_name=EVENTHUB_NAME
+    )
 
-#     with client:
-#         client.receive(
-#             on_event=on_event,
-#             starting_position="-1"
-#         )
+    with client:
+        client.receive(
+            on_event=on_event,
+            starting_position="-1"
+        )
 
-# @app.on_event("startup")
-# def startup():
-#     thread = threading.Thread(target=start_consumer, daemon=True)
-#     thread.start()
+@app.on_event("startup")
+def startup():
+    thread = threading.Thread(target=start_consumer, daemon=True)
+    thread.start()
 
 
 @app.get("/")

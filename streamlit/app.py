@@ -5,7 +5,7 @@ import plotly.express as px
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st_autorefresh(interval=5000)  # refresh every 5 seconds
+st_autorefresh(interval=30000)  # refresh every 30 seconds
 st.set_page_config(page_title="Palm Pro Dashboard", layout="wide")
 
 API_URL = "http://backend:8000/events/latest"
@@ -13,7 +13,7 @@ API_URL = "http://backend:8000/events/latest"
 # -----------------------
 # DATA LOADING
 # -----------------------
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=10)
 def load_data():
     res = requests.get(API_URL)
     return pd.DataFrame(res.json())

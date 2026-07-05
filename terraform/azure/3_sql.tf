@@ -11,4 +11,9 @@ resource "azurerm_mssql_server" "sqlserver" {
 resource "azurerm_mssql_database" "db" {
   name      = "palmprodb"
   server_id = azurerm_mssql_server.sqlserver.id
+  sku_name = "GP_S_Gen5_1"   # Serverless Gen5 (example)
+
+  auto_pause_delay_in_minutes = 15
+  min_capacity = 0.5
+  max_size_gb  = 32
 }

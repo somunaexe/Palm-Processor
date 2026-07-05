@@ -2,7 +2,6 @@ import json
 import os
 import time
 import random
-import uuid
 from datetime import datetime
 from azure.eventhub import EventHubProducerClient, EventData
 
@@ -24,7 +23,6 @@ machines = ["M-100", "M-200", "M-300"]
 
 def generate_sensor_data():
     return {
-        # "id": str(uuid.uuid4()),
         "machine_id": random.choice(machines),
         "temperature": round(random.uniform(60, 120), 2),
         "vibration": round(random.uniform(0.1, 5.0), 2),
@@ -33,13 +31,18 @@ def generate_sensor_data():
     }
 
 while True:
-    event = generate_sensor_data()
+    events = [
+        generate_sensor_data()
+        for _ in range(10)
+    ]
 
     with producer:
-        event_batch = producer.create_batch()
-        event_batch.add(EventData(json.dumps(event)))
-        producer.send_batch(event_batch)
+        batch = producer.create_batch()
+        for e in events:
+            batch.add(EventData(json.dumps(e)))
 
-    print("Sent:", event)
+        producer.send_batch(batch)
 
-    time.sleep(2)
+    print("Sent:", events)
+
+    time.sleep(15)

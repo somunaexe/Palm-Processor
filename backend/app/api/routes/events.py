@@ -6,7 +6,6 @@ from app.adapters.database.sql_repository import SqlSensorRepository
 
 router = APIRouter()
 
-
 @router.get("/events/latest")
 def get_latest_events(db: Session = Depends(get_db)):
 

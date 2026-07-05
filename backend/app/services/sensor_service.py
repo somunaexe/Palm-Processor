@@ -4,10 +4,12 @@ from app.services.prediction_service import PredictionService
 
 
 class SensorService:
-
+    
     def __init__(self, sensor_repository: SensorRepository, prediction_service: PredictionService,):
         self.sensor_repository = sensor_repository
         self.prediction_service = prediction_service
+        self.event_buffer = []
+        self.BATCH_SIZE = 50
 
     def process_event(self, event: SensorEvent) -> EnrichedSensorEvent:
         prediction = self.prediction_service.predict(event)
@@ -26,12 +28,14 @@ class SensorService:
 
         return enriched
     
-    def process_events(self, events: list[SensorEvent]) -> list[EnrichedSensorEvent]:
+    def process_events(self, event: SensorEvent) -> list[EnrichedSensorEvent]:
 
         enriched_events = []
-
-        for event in events:
-            enriched = self.process_event(event)
-            enriched_events.append(enriched)
+        self.event_buffer.append(event)
+        
+        if len(self.event_buffer) > self.BATCH_SIZE:
+            for e in self.event_buffer:
+                enriched = self.process_event(e)
+                enriched_events.append(enriched)
 
         return enriched_events
