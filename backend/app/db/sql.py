@@ -1,7 +1,7 @@
 import os
 import pyodbc
 
-CONN_STR = os.getenv("AZURE_SQL_CONN")
+CONN_STR = os.getenv("DATABASE_URL")
 
 conn = None
 

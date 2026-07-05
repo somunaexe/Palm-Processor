@@ -1,70 +1,61 @@
-import os
 import json
-import threading
+import logging
 from fastapi import FastAPI
-from azure.eventhub import EventHubConsumerClient
-from app.ml.model import predict_risk
-from app.db.sql import insert_many
-from collections import deque
+# from azure.eventhub import EventHubConsumerClient
+# from app.ml.model import predict_risk
+# from app.db.sql import insert_many
+# from collections import deque
+from app.services.factory import create_sensor_service
+from app.adapters.database.database import SessionLocal
+from app.domain.models import SensorEvent
+from app.api.routes.events import router as events_router
 
 app = FastAPI()
+app.include_router(events_router)
 
-CONNECTION_STR = os.getenv("EVENTHUB_CONN_STR")
-EVENTHUB_NAME = os.getenv("EVENTHUB_NAME")
-CONSUMER_GROUP = "$Default"
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-events = deque(maxlen=200)
+# CONNECTION_STR = os.getenv("EVENTHUB_CONN_STR")
+# EVENTHUB_NAME = os.getenv("EVENTHUB_NAME")
+# CONSUMER_GROUP = "$Default"
 
-def flush_to_db():
-    global db_buffer
+# events = deque(maxlen=200)
 
-    if not db_buffer:
-        return
+def get_service():
+    db = SessionLocal()
+    return create_sensor_service(db)
 
-    insert_many(db_buffer)
-    print(f"SAVED BATCH: {len(db_buffer)}")
-
-    db_buffer = []
+service = get_service()
 
 def on_event(partition_context, event):
     data = json.loads(event.body_as_str())
+    logger.info(f"📥 RECEIVED EVENT: {data}")
 
-    prediction = predict_risk(data)
-    enriched = { **data, **prediction }
-    print("RECEIVED + PREDICTED:", enriched)
-
-    # insert_events(enriched)  
-    events.append(enriched)
-
-    # keep memory bounded
-    # if len(events) > 100:
-    #     events.pop(0)
-
-    # flush every 10 events
-    if len(db_buffer) >= 10:
-        flush_to_db()
+    sensor_event = SensorEvent(**data)
+    enriched = service.process_event(sensor_event)
+    logger.info(f"⚙️ PROCESSED EVENT: {enriched}")
 
     partition_context.update_checkpoint(event)
 
 
-def start_consumer():
-    client = EventHubConsumerClient.from_connection_string(
-        conn_str=CONNECTION_STR,
-        consumer_group=CONSUMER_GROUP,
-        eventhub_name=EVENTHUB_NAME
-    )
+# def start_consumer():
+#     client = EventHubConsumerClient.from_connection_string(
+#         conn_str=CONNECTION_STR,
+#         consumer_group=CONSUMER_GROUP,
+#         eventhub_name=EVENTHUB_NAME
+#     )
 
-    with client:
-        client.receive(
-            on_event=on_event,
-            starting_position="-1"
-        )
+#     with client:
+#         client.receive(
+#             on_event=on_event,
+#             starting_position="-1"
+#         )
 
-
-@app.on_event("startup")
-def startup():
-    thread = threading.Thread(target=start_consumer, daemon=True)
-    thread.start()
+# @app.on_event("startup")
+# def startup():
+#     thread = threading.Thread(target=start_consumer, daemon=True)
+#     thread.start()
 
 
 @app.get("/")
@@ -72,9 +63,9 @@ def health():
     return {"status": "running"}
 
 
-@app.get("/events")
-def get_events():
-    return events
+# @app.get("/events")
+# def get_events():
+#     return events
 
 # @app.get("/machines")
 # def a():

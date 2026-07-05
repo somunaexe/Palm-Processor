@@ -1,14 +1,6 @@
 version: "3.8"
 
 services:
-
-  # terraform:
-  #   build:
-  #     context: ./terraform
-  #   container_name: terraform-infra
-  #   env_file:
-  #     - ./terraform/environments/terraform.tfvars
-  #   restart: unless-stopped
   simulator:
     build:
       context: ./simulator
@@ -25,4 +17,16 @@ services:
       - .env
     ports:
       - "8000:8000"
+    # restart: unless-stopped
+
+  streamlit:
+    build:
+      context: ./streamlit
+    container_name: palm-dashboard
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    depends_on:
+      - backend
     # restart: unless-stopped

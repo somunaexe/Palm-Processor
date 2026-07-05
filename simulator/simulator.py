@@ -24,7 +24,7 @@ machines = ["M-100", "M-200", "M-300"]
 
 def generate_sensor_data():
     return {
-        "id": str(uuid.uuid4()),
+        # "id": str(uuid.uuid4()),
         "machine_id": random.choice(machines),
         "temperature": round(random.uniform(60, 120), 2),
         "vibration": round(random.uniform(0.1, 5.0), 2),
