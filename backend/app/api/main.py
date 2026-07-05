@@ -4,16 +4,20 @@ import os
 import threading
 from fastapi import FastAPI
 from azure.eventhub import EventHubConsumerClient
-# from app.ml.model import predict_risk
-# from app.db.sql import insert_many
-# from collections import deque
 from app.services.factory import create_sensor_service
 from app.adapters.database.database import SessionLocal
 from app.domain.models import SensorEvent
 from app.api.routes.events import router as events_router
+import strawberry
+from strawberry.fastapi import GraphQLRouter
+from app.graphql.schema import Query
 
 app = FastAPI()
 app.include_router(events_router)
+
+schema = strawberry.Schema(query=Query)
+graphql_app = GraphQLRouter(schema)
+app.include_router(graphql_app, prefix="/graphql")
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
