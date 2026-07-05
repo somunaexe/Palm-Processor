@@ -10,3 +10,4 @@ scikit-learn
 joblib
 numpy
 pandas
+strawberry-graphql[fastapi]
