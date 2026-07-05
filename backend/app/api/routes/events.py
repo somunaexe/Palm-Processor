@@ -11,4 +11,4 @@ def get_latest_events(db: Session = Depends(get_db)):
 
     repo = SqlSensorRepository(db)
 
-    return repo.get_latest(limit=50)
+    return repo.get_latest(limit=200)

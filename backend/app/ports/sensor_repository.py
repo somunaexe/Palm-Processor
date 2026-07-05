@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-
 from app.domain.models import EnrichedSensorEvent
-
 
 class SensorRepository(ABC):
     """Contract for storing and retrieving sensor events."""

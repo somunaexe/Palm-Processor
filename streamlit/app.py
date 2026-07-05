@@ -5,7 +5,7 @@ import plotly.express as px
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
-st_autorefresh(interval=30000)  # refresh every 30 seconds
+st_autorefresh(interval=10000)  # refresh every 30 seconds
 st.set_page_config(page_title="Palm Pro Dashboard", layout="wide")
 
 API_URL = "http://backend:8000/events/latest"
@@ -15,12 +15,24 @@ API_URL = "http://backend:8000/events/latest"
 # -----------------------
 @st.cache_data(ttl=10)
 def load_data():
-    res = requests.get(API_URL)
-    return pd.DataFrame(res.json())
+    try:
+        res = requests.get(API_URL, timeout=5)
+        res.raise_for_status()
+
+        data = res.json()
+
+        if not data:
+            return pd.DataFrame()
+
+        return pd.DataFrame(data)
+
+    except requests.RequestException as e:
+        st.error(f"Backend unavailable: {e}")
+        return pd.DataFrame()
 
 df = load_data()
-st.write(df.columns)
-st.write(df.head())
+if "timestamp" in df.columns:
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
 
 if df.empty or "risk_score" not in df.columns:
     st.warning("No data yet — waiting for events...")
@@ -35,18 +47,19 @@ st.caption(f"Last refresh: {datetime.now().strftime('%H:%M:%S')}")
 # -----------------------
 # KPIs (TOP METRICS)
 # -----------------------
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.metric("Total Events", len(df))
+    st.metric("Events", len(df))
 
 with col2:
-    avg_risk = df["risk_score"].mean()
-    st.metric("Avg Risk Score", f"{avg_risk:.2f}")
+    st.metric("Machines", df["machine_id"].nunique())
 
 with col3:
-    high_risk = len(df[df["risk_score"] > 0.7])
-    st.metric("High Risk Events", high_risk)
+    st.metric("Avg Risk", f"{df['risk_score'].mean():.2f}")
+
+with col4:
+    st.metric("Critical", len(df[df["risk_score"] > 0.7]))
 
 # -----------------------
 # RISK DISTRIBUTION
@@ -63,13 +76,31 @@ fig = px.histogram(
 st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------
+# AVERAGE RISK OVER TIME
+# -----------------------
+st.subheader("📈 Average Risk Over Time")
+risk_over_time = df.sort_values("timestamp")
+
+fig = px.line(
+    risk_over_time,
+    x="timestamp",
+    y="risk_score",
+    color="machine_id",
+    markers=True,
+    title="Machine Risk Over Time"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# -----------------------
 # MACHINE STATUS VIEW
 # -----------------------
 st.subheader("🟢 Machine Health Overview")
 
-df["status"] = df["risk_score"].apply(
-    lambda x: "CRITICAL" if x > 0.8 else ("WARNING" if x > 0.5 else "OK")
-)
+if "status" not in df.columns:
+    df["status"] = df["risk_score"].apply(
+        lambda x: "CRITICAL" if x > 0.8 else ("WARNING" if x > 0.5 else "OK")
+    )
 
 status_counts = df["status"].value_counts().reset_index()
 status_counts.columns = ["status", "count"]
@@ -88,9 +119,24 @@ st.plotly_chart(fig2, use_container_width=True)
 # -----------------------
 st.subheader("📡 Live Sensor Feed")
 
+# st.dataframe(
+#     df.sort_values(by="risk_score", ascending=False),
+#     use_container_width=True
+# )
+
 st.dataframe(
-    df.sort_values(by="risk_score", ascending=False),
-    use_container_width=True
+    df[
+        [
+            "machine_id",
+            "temperature",
+            "vibration",
+            "pressure",
+            "risk_score",
+            "status",
+            "timestamp",
+        ]
+    ].sort_values("timestamp", ascending=False),
+    use_container_width=True,
 )
 
 # -----------------------
