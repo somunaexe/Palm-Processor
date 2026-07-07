@@ -26,6 +26,10 @@ spec:
 
           ports:
             - containerPort: 8000
+          
+          envFrom:
+            - secretRef:
+                name: palm-secrets
 
 ---
 apiVersion: v1
