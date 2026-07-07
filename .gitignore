@@ -6,4 +6,4 @@ node_modules
 .env
 __pycache__
 
-secrets.yaml
+secrets*
